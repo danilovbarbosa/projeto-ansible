@@ -17,9 +17,26 @@ sudo apt install vagrant && \
 sudo apt install ansible
 ```
 
+### EXECUÇÃO
+* Para executar o projeto faça:
+1. Suba os boxes definidos no Vagrantfile
+```shell
+vagrant up
+```
+2. Execute as configurações do provisioning.yml
+```shell
+ansible-playbook -i hosts provisioning.yml
+```
+
+### TESTE MANUAL
+* Para testar acesse:
+    * http://172.17.177.40/
+
+* Para configurar o Wordpress, acesse:
+    * http://172.17.177.40/wp-admin/install.php
 ----------------------------
 #### SE VOCÊ CHEGOU ATÉ AQUI
-Muito obrigado pela atenção
+Muito obrigado pela atenção!
 
 #### SOBRE O AUTOR/ORGANIZADOR
-Danilo Costa
+Danilo Costa.
