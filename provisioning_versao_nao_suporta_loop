@@ -1,0 +1,14 @@
+---
+- hosts: all
+  tasks:
+    - name: 'Instalar php5, apache2 e libapache2-mod-php5'
+      apt:
+        name: "{{ item }}"
+        state: latest
+      become: yes
+      with_items:
+        - php5
+        - apache2
+        - libapache2-mod-php5
+
+...

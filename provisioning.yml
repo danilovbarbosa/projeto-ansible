@@ -1,0 +1,108 @@
+---
+- hosts: database
+  handlers:
+    - name: restart mysql
+      service:
+        name: mysql
+        state: restarted
+      become: yes
+  tasks:
+    - name: 'Instalar dependências do do Mysql'
+      apt:
+        name: [
+          'mysql-server-5.6',
+          'python-mysqldb',
+        ]
+        state: latest
+      become: yes
+
+    - name: 'Instalar Mysql'
+      mysql_db:
+        name: "{{ wp_db_name }}"
+        login_user: root
+        state: present
+
+    - name: 'Adicionando usuário no bd'
+      mysql_user:
+        login_user: root
+        name: "{{ wp_username }}"
+        password: '{{wp_user_password}}'
+        priv: '{{ wp_db_name }}.*:ALL'
+        state: present
+        host: '{{ item }}'
+      with_items:
+        - 'localhost'
+        - '127.0.0.1'
+        - '{{wp_host_ip}}'
+    - name: 'Configurar arquivo para aceitar conexões remotas.'
+      copy:
+        src: 'files/my.cnf'
+        dest: '/etc/mysql/my.cnf'
+      become: yes
+      notify:
+        - restart mysql
+        
+- hosts: wordpress
+  handlers:
+  - name: restart apache2
+    service:
+      name: apache2
+      state: restarted
+    become: yes
+
+  tasks:
+    - name: 'Instalar dependências do projeto'
+      apt:
+        name: [
+          'php5', 
+          'apache2', 
+          'libapache2-mod-php5', 
+          'php5-gd',
+          'libssh2-php',
+          'php5-mcrypt',
+          'php5-mysql',
+        ]
+        state: latest
+      become: yes
+    
+    - name: 'Download do arquivo de instalação do Wordpress'
+      get_url:
+        url: 'https://wordpress.org/wordpress-5.0.tar.gz'
+        dest: '/tmp/wordpress.tar.gz'
+
+    - name: Extract /tmp/wordpress.tar.gz
+      unarchive:
+        src: '/tmp/wordpress.tar.gz'
+        dest: '/var/www'
+        remote_src: yes
+      become: yes
+
+    - name: 'Copiar o arquivo de amostra do wordpress para testar a execução'
+      copy:
+        src: '{{wp_installation_dir}}/wp-config-sample.php'
+        dest: '{{wp_installation_dir}}/wp-config.php'
+        remote_src: yes
+      become: yes
+
+    - name: 'Configurar o wp-config com as entradas do bd.'
+      ansible.builtin.replace:
+        path: '{{wp_installation_dir}}/wp-config.php'
+        regexp: '{{ item.regex }}'
+        replace: '{{ item.value }}'
+        backup: yes
+      with_items:
+        - {regex: 'database_name_here', value: '{{ wp_db_name }}'}       
+        - {regex: 'username_here', value: '{{ wp_username }}'}       
+        - {regex: 'password_here', value: '{{wp_user_password}}'}      
+        - {regex: 'localhost', value: '{{wp_db_ip}}'}      
+
+      become: yes 
+
+    - name: 'Copiar o arquivo de configuração para servir o Wordpress'
+      copy:
+        src: 'files/000-default.conf'
+        dest: '/etc/apache2/sites-available/000-default.conf'
+      become: yes
+      notify:
+        - restart apache2
+...
